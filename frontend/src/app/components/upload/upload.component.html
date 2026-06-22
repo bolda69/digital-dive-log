@@ -1,0 +1,97 @@
+<div class="page-container">
+  <div class="page-header">
+    <h2>📷 Tauchgang Hochladen</h2>
+    <p>Fotografiere dein physisches Logbuch und lass die KI die Daten automatisch auslesen</p>
+  </div>
+
+  <div class="glass-card upload-card">
+    <div class="upload-dropzone"
+         [class.dragover]="isDragOver"
+         (dragover)="onDragOver($event)"
+         (dragleave)="onDragLeave()"
+         (drop)="onDrop($event)">
+
+      <!-- Empty State -->
+      <div class="upload-prompt" *ngIf="!selectedFile && !loading">
+        <div class="upload-icon">🌊</div>
+        <h3>Logbuch-Foto hochladen</h3>
+        <p>Ziehe dein Bild hierher oder wähle eine Datei aus</p>
+        <div class="upload-formats">
+          <span class="badge">PNG</span>
+          <span class="badge">JPEG</span>
+          <span class="badge">GIF</span>
+          <span class="text-muted" style="font-size: 0.8rem; padding: 0.2rem 0.5rem;">max. 10 MB</span>
+        </div>
+        <input type="file" id="fileInput" accept="image/png, image/jpeg, image/gif"
+               (change)="onFileSelected($event)" style="display: none;">
+        <button type="button" class="btn btn-primary btn-lg" (click)="triggerFileInput()">
+          📁 Datei auswählen
+        </button>
+      </div>
+
+      <!-- Preview Mode -->
+      <div class="upload-preview" *ngIf="selectedFile && !loading">
+        <div class="preview-header">
+          <div class="file-info">
+            <span class="file-icon">🖼️</span>
+            <div>
+              <div class="file-name">{{ selectedFile.name }}</div>
+              <div class="file-size text-muted" style="font-size: 0.8rem;">
+                {{ (selectedFile.size / 1024) | number:'1.0-1' }} KB
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" (click)="clearSelection()">✕ Entfernen</button>
+        </div>
+
+        <div class="preview-image-wrap" *ngIf="previewUrl">
+          <img [src]="previewUrl" alt="Vorschau des Logbuchs" class="preview-image">
+        </div>
+
+        <div class="preview-actions">
+          <button type="button" class="btn btn-outline" (click)="clearSelection()">
+            Zurück
+          </button>
+          <button type="button" class="btn btn-success btn-lg" (click)="uploadImage()">
+            🤖 KI-Analyse starten
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div class="upload-loading" *ngIf="loading">
+        <div class="loading-ocean">
+          <div class="spinner" style="width: 52px; height: 52px;"></div>
+          <div class="loading-bubbles">
+            <span class="bubble"></span>
+            <span class="bubble"></span>
+            <span class="bubble"></span>
+          </div>
+        </div>
+        <h3 style="color: var(--cyan-400); font-family: Outfit, sans-serif;">Analysiere Logbuch...</h3>
+        <p>Die KI liest deinen Tauchgang aus. Das dauert einen Moment.</p>
+      </div>
+    </div>
+
+    <!-- Error Alert -->
+    <div class="alert alert-danger mt-2" *ngIf="errorMessage">
+      ⚠️ {{ errorMessage }}
+    </div>
+
+    <!-- Info Box -->
+    <div class="upload-info" *ngIf="!selectedFile && !loading">
+      <div class="info-step">
+        <div class="step-num">1</div>
+        <div>Fotografiere deine Logbuch-Seite möglichst gerade und scharf</div>
+      </div>
+      <div class="info-step">
+        <div class="step-num">2</div>
+        <div>Lade das Foto hoch — Gemini AI liest alle Felder aus</div>
+      </div>
+      <div class="info-step">
+        <div class="step-num">3</div>
+        <div>Überprüfe und korrigiere die Daten, dann speichern</div>
+      </div>
+    </div>
+  </div>
+</div>

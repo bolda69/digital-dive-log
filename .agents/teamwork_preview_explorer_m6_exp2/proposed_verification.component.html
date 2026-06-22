@@ -1,0 +1,120 @@
+<div class="verification-container">
+  <h2>Tauchgang-Daten verifizieren</h2>
+  <p>Bitte überprüfen und korrigieren Sie die extrahierten Daten vor dem Speichern.</p>
+
+  <form [formGroup]="diveForm" (ngSubmit)="onSave()" class="verification-form">
+    
+    <div class="form-row">
+      <div class="form-group col">
+        <label for="tauchgang_nr">Tauchgang Nr.</label>
+        <input id="tauchgang_nr" type="number" formControlName="tauchgang_nr" placeholder="z.B. 102" />
+        <div *ngIf="diveForm.get('tauchgang_nr')?.touched && diveForm.get('tauchgang_nr')?.errors" class="validation-error">
+          <span *ngIf="diveForm.get('tauchgang_nr')?.errors?.['min']">Muss eine positive Zahl sein.</span>
+          <span *ngIf="diveForm.get('tauchgang_nr')?.errors?.['pattern']">Muss eine ganze Zahl sein.</span>
+        </div>
+      </div>
+
+      <div class="form-group col">
+        <label for="datum">Datum *</label>
+        <input id="datum" type="text" formControlName="datum" placeholder="YYYY-MM-DD" />
+        <div *ngIf="diveForm.get('datum')?.touched && diveForm.get('datum')?.errors" class="validation-error">
+          <span *ngIf="diveForm.get('datum')?.errors?.['required']">Datum ist erforderlich.</span>
+          <span *ngIf="diveForm.get('datum')?.errors?.['invalidFormat']">Format muss YYYY-MM-DD sein.</span>
+          <span *ngIf="diveForm.get('datum')?.errors?.['invalidMonth']">Ungültiger Monat.</span>
+          <span *ngIf="diveForm.get('datum')?.errors?.['invalidDate']">Ungültiges Kalenderdatum.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="ort">Ort / Tauchplatz *</label>
+      <input id="ort" type="text" formControlName="ort" placeholder="z.B. Dahab Blue Hole" />
+      <div *ngIf="diveForm.get('ort')?.touched && diveForm.get('ort')?.errors" class="validation-error">
+        <span *ngIf="diveForm.get('ort')?.errors?.['required']">Ort ist erforderlich.</span>
+        <span *ngIf="diveForm.get('ort')?.errors?.['maxlength']">Maximal 1000 Zeichen erlaubt.</span>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col">
+        <label for="tiefe_m">Tiefe (m)</label>
+        <input id="tiefe_m" type="number" step="0.1" formControlName="tiefe_m" placeholder="z.B. 28.5" />
+        <div *ngIf="diveForm.get('tiefe_m')?.touched && diveForm.get('tiefe_m')?.errors" class="validation-error">
+          <span *ngIf="diveForm.get('tiefe_m')?.errors?.['min']">Darf nicht negativ sein.</span>
+          <span *ngIf="diveForm.get('tiefe_m')?.errors?.['max']">Unrealistisch tief (max. 11000m).</span>
+        </div>
+      </div>
+
+      <div class="form-group col">
+        <label for="dauer_min">Dauer (min)</label>
+        <input id="dauer_min" type="number" formControlName="dauer_min" placeholder="z.B. 45" />
+        <div *ngIf="diveForm.get('dauer_min')?.touched && diveForm.get('dauer_min')?.errors" class="validation-error">
+          <span *ngIf="diveForm.get('dauer_min')?.errors?.['min']">Darf nicht negativ sein.</span>
+          <span *ngIf="diveForm.get('dauer_min')?.errors?.['pattern']">Muss eine ganze Zahl sein.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col">
+        <label for="gewicht_kg">Gewicht (kg)</label>
+        <input id="gewicht_kg" type="number" step="0.1" formControlName="gewicht_kg" placeholder="z.B. 8.0" />
+        <div *ngIf="diveForm.get('gewicht_kg')?.touched && diveForm.get('gewicht_kg')?.errors" class="validation-error">
+          <span *ngIf="diveForm.get('gewicht_kg')?.errors?.['min']">Darf nicht negativ sein.</span>
+        </div>
+      </div>
+
+      <div class="form-group col">
+        <label for="temperatur_c">Temperatur (°C)</label>
+        <input id="temperatur_c" type="number" formControlName="temperatur_c" placeholder="z.B. 24" />
+        <div *ngIf="diveForm.get('temperatur_c')?.touched && diveForm.get('temperatur_c')?.errors" class="validation-error">
+          <span *ngIf="diveForm.get('temperatur_c')?.errors?.['min']">Darf nicht negativ sein.</span>
+          <span *ngIf="diveForm.get('temperatur_c')?.errors?.['pattern']">Muss eine ganze Zahl sein.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group col">
+        <label for="sicht">Sichtweite</label>
+        <input id="sicht" type="text" formControlName="sicht" placeholder="z.B. 20m" />
+      </div>
+
+      <div class="form-group col">
+        <label for="stroemung">Strömung</label>
+        <input id="stroemung" type="text" formControlName="stroemung" placeholder="z.B. mild" />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="unterschrift_partner">Unterschrift Buddy / Partner</label>
+      <input id="unterschrift_partner" type="text" formControlName="unterschrift_partner" placeholder="Name des Buddys" />
+    </div>
+
+    <div class="form-group stempel-section">
+      <label>Stempel</label>
+      <div class="stempel-list" *ngIf="stempelList.length > 0">
+        <div *ngFor="let stamp of stempelList; let i = index" class="stempel-item">
+          <span class="stamp-text">{{ stamp }}</span>
+          <button type="button" class="btn-remove-stamp" (click)="removeStamp(i)">&times;</button>
+        </div>
+      </div>
+      <div class="stempel-input-group">
+        <input type="text" [(ngModel)]="newStamp" name="newStamp" [ngModelOptions]="{standalone: true}" placeholder="Neuen Stempel hinzufügen" (keyup.enter)="addStamp()" />
+        <button type="button" class="btn btn-secondary" (click)="addStamp()">Hinzufügen</button>
+      </div>
+    </div>
+
+    <div *ngIf="error" class="error-message">
+      {{ error }}
+    </div>
+
+    <div class="actions">
+      <button type="submit" [disabled]="diveForm.invalid || saving" class="btn btn-success">
+        {{ saving ? 'Wird gespeichert...' : 'Tauchgang speichern' }}
+      </button>
+      <a routerLink="/list" class="btn btn-secondary">Abbrechen</a>
+    </div>
+
+  </form>
+</div>

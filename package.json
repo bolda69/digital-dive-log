@@ -1,0 +1,21 @@
+{
+  "name": "digital-dive-log",
+  "version": "1.0.0",
+  "description": "Full-stack web application for digitizing physical dive logbooks",
+  "type": "commonjs",
+  "scripts": {
+    "start:mock": "node e2e/mock-server.js",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "start:frontend": "cd frontend && ng serve",
+    "test:frontend": "cd frontend && ng test --watch=false --browsers=ChromeHeadless"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}

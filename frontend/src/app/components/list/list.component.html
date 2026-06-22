@@ -1,0 +1,97 @@
+<div class="page-container">
+  <div class="list-header">
+    <div class="page-header" style="margin-bottom: 0;">
+      <h2>🗂️ Mein Tauchlogbuch</h2>
+      <p>{{ dives.length }} {{ dives.length === 1 ? 'Tauchgang' : 'Tauchgänge' }} aufgezeichnet</p>
+    </div>
+    <button type="button" class="btn btn-primary" routerLink="/upload">
+      📷 Neuer Eintrag
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <span>Lade Tauchlogbuch...</span>
+  </div>
+
+  <!-- Error State -->
+  <div class="alert alert-danger" *ngIf="errorMessage" style="margin-top: 1rem;">
+    ⚠️ {{ errorMessage }}
+    <button type="button" class="btn btn-outline btn-sm" (click)="fetchDives()" style="margin-left: auto;">
+      Nochmals versuchen
+    </button>
+  </div>
+
+  <!-- Empty State -->
+  <div class="glass-card empty-state" *ngIf="!loading && !errorMessage && dives.length === 0">
+    <span class="empty-icon">🤿</span>
+    <h3>Noch keine Tauchgänge</h3>
+    <p>Lade dein erstes Logbuch-Foto hoch und starte dein digitales Tauchlogbuch</p>
+    <button type="button" class="btn btn-success" routerLink="/upload">
+      📷 Ersten Eintrag erstellen
+    </button>
+  </div>
+
+  <!-- Dive Cards Grid -->
+  <div class="dives-grid" *ngIf="!loading && !errorMessage && dives.length > 0">
+    <div class="dive-card glass-card" *ngFor="let dive of dives">
+      <div class="dive-card-header">
+        <div class="dive-number" *ngIf="dive.tauchgang_nr !== null">
+          <span class="dive-nr-label">Tauchgang</span>
+          <span class="dive-nr-value">#{{ dive.tauchgang_nr }}</span>
+        </div>
+        <div class="dive-date">{{ dive.datum | date:'dd.MM.yyyy' }}</div>
+      </div>
+
+      <h3 class="dive-location">📍 {{ dive.ort }}</h3>
+
+      <div class="dive-stats">
+        <div class="stat-item" *ngIf="dive.tiefe_m !== null">
+          <span class="stat-icon">⬇️</span>
+          <div class="stat-info">
+            <div class="stat-value">{{ dive.tiefe_m }} m</div>
+            <div class="stat-label">Tiefe</div>
+          </div>
+        </div>
+        <div class="stat-item" *ngIf="dive.dauer_min !== null">
+          <span class="stat-icon">⏱️</span>
+          <div class="stat-info">
+            <div class="stat-value">{{ dive.dauer_min }} min</div>
+            <div class="stat-label">Dauer</div>
+          </div>
+        </div>
+        <div class="stat-item" *ngIf="dive.temperatur_c !== null">
+          <span class="stat-icon">🌡️</span>
+          <div class="stat-info">
+            <div class="stat-value">{{ dive.temperatur_c }}°C</div>
+            <div class="stat-label">Temperatur</div>
+          </div>
+        </div>
+        <div class="stat-item" *ngIf="dive.gewicht_kg !== null">
+          <span class="stat-icon">⚖️</span>
+          <div class="stat-info">
+            <div class="stat-value">{{ dive.gewicht_kg }} kg</div>
+            <div class="stat-label">Gewicht</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dive-meta" *ngIf="dive.sicht || dive.stroemung || dive.unterschrift_partner">
+        <span class="stat-pill" *ngIf="dive.sicht">
+          👁️ Sicht: {{ dive.sicht }}
+        </span>
+        <span class="stat-pill" *ngIf="dive.stroemung">
+          🌊 Strömung: {{ dive.stroemung }}
+        </span>
+        <span class="stat-pill" *ngIf="dive.unterschrift_partner">
+          🤝 {{ dive.unterschrift_partner }}
+        </span>
+      </div>
+
+      <div class="dive-stamps" *ngIf="dive.stempel && dive.stempel.length > 0">
+        <span class="badge" *ngFor="let stamp of dive.stempel">🏅 {{ stamp }}</span>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,24 @@
+<nav class="app-nav">
+  <div class="nav-inner">
+    <a routerLink="/list" class="nav-brand">
+      <span class="brand-icon">🤿</span>
+      <span>Digital<span class="brand-accent">Dive</span>Log</span>
+    </a>
+    <ul class="nav-links">
+      <li>
+        <a routerLink="/list" routerLinkActive="active" class="nav-link">
+          <span>📋</span> Logbuch
+        </a>
+      </li>
+      <li>
+        <a routerLink="/upload" routerLinkActive="active" class="nav-link">
+          <span>📷</span> Upload
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+  <router-outlet></router-outlet>
+</main>

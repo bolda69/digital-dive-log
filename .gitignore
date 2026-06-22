@@ -1,0 +1,35 @@
+# Digital Dive Log — .gitignore
+
+# Node modules
+node_modules/
+*/node_modules/
+
+# Environment files (contains API keys)
+.env
+.env.local
+.env.production
+
+# Build outputs
+frontend/dist/
+frontend/.angular/cache/
+
+# Database file (local data)
+backend/dives.db
+dives.db
+*.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test results
+test-results/
+playwright-report/

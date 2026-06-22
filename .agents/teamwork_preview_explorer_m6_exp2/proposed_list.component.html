@@ -1,0 +1,74 @@
+<div class="list-container">
+  <div class="header-actions">
+    <h2>Meine Tauchgänge</h2>
+    <a routerLink="/upload" class="btn btn-primary">Neues Logbuch hochladen</a>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    Lädt Tauchgänge...
+  </div>
+
+  <div *ngIf="error" class="error-message">
+    {{ error }}
+  </div>
+
+  <div *ngIf="!loading && !error" class="table-responsive">
+    <table class="dives-table" *ngIf="dives.length > 0; else noDives">
+      <thead>
+        <tr>
+          <th (click)="toggleSort('tauchgang_nr')" class="sortable">
+            Nr. <span *ngIf="sortBy === 'tauchgang_nr'">{{ sortDesc ? '▼' : '▲' }}</span>
+          </th>
+          <th (click)="toggleSort('datum')" class="sortable">
+            Datum <span *ngIf="sortBy === 'datum'">{{ sortDesc ? '▼' : '▲' }}</span>
+          </th>
+          <th (click)="toggleSort('ort')" class="sortable">
+            Ort / Tauchplatz <span *ngIf="sortBy === 'ort'">{{ sortDesc ? '▼' : '▲' }}</span>
+          </th>
+          <th (click)="toggleSort('tiefe_m')" class="sortable">
+            Tiefe <span *ngIf="sortBy === 'tiefe_m'">{{ sortDesc ? '▼' : '▲' }}</span>
+          </th>
+          <th (click)="toggleSort('dauer_min')" class="sortable">
+            Dauer <span *ngIf="sortBy === 'dauer_min'">{{ sortDesc ? '▼' : '▲' }}</span>
+          </th>
+          <th (click)="toggleSort('temperatur_c')" class="sortable">
+            Temp <span *ngIf="sortBy === 'temperatur_c'">{{ sortDesc ? '▼' : '▲' }}</span>
+          </th>
+          <th (click)="toggleSort('gewicht_kg')" class="sortable">
+            Blei <span *ngIf="sortBy === 'gewicht_kg'">{{ sortDesc ? '▼' : '▲' }}</span>
+          </th>
+          <th>Sicht</th>
+          <th>Strömung</th>
+          <th>Buddy</th>
+          <th>Stempel</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let dive of dives">
+          <td>{{ dive.tauchgang_nr !== null ? dive.tauchgang_nr : '-' }}</td>
+          <td>{{ dive.datum }}</td>
+          <td><strong>{{ dive.ort }}</strong></td>
+          <td>{{ dive.tiefe_m !== null ? (dive.tiefe_m | number:'1.1-1') + ' m' : '-' }}</td>
+          <td>{{ dive.dauer_min !== null ? dive.dauer_min + ' min' : '-' }}</td>
+          <td>{{ dive.temperatur_c !== null ? dive.temperatur_c + ' °C' : '-' }}</td>
+          <td>{{ dive.gewicht_kg !== null ? (dive.gewicht_kg | number:'1.1-1') + ' kg' : '-' }}</td>
+          <td>{{ dive.sicht || '-' }}</td>
+          <td>{{ dive.stroemung || '-' }}</td>
+          <td>{{ dive.unterschrift_partner || '-' }}</td>
+          <td>
+            <div class="stamps-cell">
+              <span *ngFor="let stamp of dive.stempel" class="stamp-badge">{{ stamp }}</span>
+              <span *ngIf="!dive.stempel || dive.stempel.length === 0">-</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <ng-template #noDives>
+      <div class="no-dives-state">
+        <p>Noch keine Tauchgänge erfasst. Klicken Sie oben auf "Neues Logbuch hochladen", um zu beginnen!</p>
+      </div>
+    </ng-template>
+  </div>
+</div>

@@ -1,0 +1,23 @@
+<div class="upload-container">
+  <h2>Tauchprotokoll hochladen</h2>
+  <p>Laden Sie ein Foto Ihres physischen Logbuchs hoch, um die Daten per KI extrahieren zu lassen.</p>
+
+  <div class="form-group">
+    <label for="image-upload" class="custom-file-upload">
+      Bild auswählen
+    </label>
+    <input id="image-upload" type="file" (change)="onFileSelected($event)" accept="image/*" />
+    <span *ngIf="selectedFile" class="file-name">{{ selectedFile.name }}</span>
+  </div>
+
+  <div class="actions">
+    <button (click)="onUpload()" [disabled]="!selectedFile || uploading" class="btn btn-primary">
+      {{ uploading ? 'Wird verarbeitet...' : 'Hochladen und Analysieren' }}
+    </button>
+    <a routerLink="/list" class="btn btn-secondary">Abbrechen</a>
+  </div>
+
+  <div *ngIf="error" class="error-message">
+    {{ error }}
+  </div>
+</div>
