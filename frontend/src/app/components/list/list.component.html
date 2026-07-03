@@ -9,13 +9,13 @@
     </button>
   </div>
 
-  <!-- Loading State -->
+  <!-- Loading -->
   <div class="loading-state" *ngIf="loading">
     <div class="spinner"></div>
     <span>Lade Tauchlogbuch...</span>
   </div>
 
-  <!-- Error State -->
+  <!-- Error -->
   <div class="alert alert-danger" *ngIf="errorMessage" style="margin-top: 1rem;">
     ⚠️ {{ errorMessage }}
     <button type="button" class="btn btn-outline btn-sm" (click)="fetchDives()" style="margin-left: auto;">
@@ -23,7 +23,7 @@
     </button>
   </div>
 
-  <!-- Empty State -->
+  <!-- Empty -->
   <div class="glass-card empty-state" *ngIf="!loading && !errorMessage && dives.length === 0">
     <span class="empty-icon">🤿</span>
     <h3>Noch keine Tauchgänge</h3>
@@ -33,65 +33,66 @@
     </button>
   </div>
 
-  <!-- Dive Cards Grid -->
-  <div class="dives-grid" *ngIf="!loading && !errorMessage && dives.length > 0">
-    <div class="dive-card glass-card" *ngFor="let dive of dives">
-      <div class="dive-card-header">
-        <div class="dive-number" *ngIf="dive.tauchgang_nr !== null">
-          <span class="dive-nr-label">Tauchgang</span>
+  <!-- Dive List -->
+  <div class="dives-list" *ngIf="!loading && !errorMessage && dives.length > 0">
+    <a [routerLink]="['/edit', dive.id]" class="dive-row glass-card" *ngFor="let dive of dives">
+
+      <!-- Left: Nr + Datum -->
+      <div class="dive-row-left">
+        <div class="dive-nr" *ngIf="dive.tauchgang_nr !== null">
+          <span class="dive-nr-label">Nr.</span>
           <span class="dive-nr-value">#{{ dive.tauchgang_nr }}</span>
         </div>
-        <div class="dive-date">{{ dive.datum | date:'dd.MM.yyyy' }}</div>
+        <div class="dive-nr" *ngIf="dive.tauchgang_nr === null">
+          <span class="dive-nr-value text-muted">–</span>
+        </div>
+        <div class="dive-date">{{ dive.datum | date:'dd.MM.yy' }}</div>
       </div>
 
-      <h3 class="dive-location">📍 {{ dive.ort }}</h3>
+      <!-- Divider -->
+      <div class="row-divider"></div>
 
-      <div class="dive-stats">
-        <div class="stat-item" *ngIf="dive.tiefe_m !== null">
-          <span class="stat-icon">⬇️</span>
-          <div class="stat-info">
-            <div class="stat-value">{{ dive.tiefe_m }} m</div>
-            <div class="stat-label">Tiefe</div>
-          </div>
+      <!-- Center: Location + Stats -->
+      <div class="dive-row-center">
+        <div class="dive-location">📍 {{ dive.ort }}</div>
+        <div class="dive-stats">
+          <span class="stat-chip" *ngIf="dive.tiefe_m !== null">
+            ⬇️ <strong>{{ dive.tiefe_m }}m</strong>
+          </span>
+          <span class="stat-chip" *ngIf="dive.dauer_min !== null">
+            ⏱️ <strong>{{ dive.dauer_min }}'</strong>
+          </span>
+          <span class="stat-chip" *ngIf="dive.temperatur_c !== null">
+            🌡️ <strong>{{ dive.temperatur_c }}°</strong>
+          </span>
+          <span class="stat-chip" *ngIf="dive.gewicht_kg !== null">
+            ⚖️ <strong>{{ dive.gewicht_kg }}kg</strong>
+          </span>
+          <span class="stat-chip sicht-chip" *ngIf="dive.sicht">
+            {{ sichtIcon(dive.sicht) }} {{ normalizeSicht(dive.sicht) }}
+          </span>
+          <span class="stat-chip" *ngIf="dive.stroemung">
+            🌊 {{ dive.stroemung }}
+          </span>
+          <span class="stat-chip" *ngIf="dive.unterschrift_partner">
+            🤝 {{ dive.unterschrift_partner }}
+          </span>
         </div>
-        <div class="stat-item" *ngIf="dive.dauer_min !== null">
-          <span class="stat-icon">⏱️</span>
-          <div class="stat-info">
-            <div class="stat-value">{{ dive.dauer_min }} min</div>
-            <div class="stat-label">Dauer</div>
-          </div>
+        <div class="dive-stamps" *ngIf="dive.stempel && dive.stempel.length > 0">
+          <span class="badge" *ngFor="let stamp of dive.stempel">🏅 {{ stamp }}</span>
         </div>
-        <div class="stat-item" *ngIf="dive.temperatur_c !== null">
-          <span class="stat-icon">🌡️</span>
-          <div class="stat-info">
-            <div class="stat-value">{{ dive.temperatur_c }}°C</div>
-            <div class="stat-label">Temperatur</div>
-          </div>
-        </div>
-        <div class="stat-item" *ngIf="dive.gewicht_kg !== null">
-          <span class="stat-icon">⚖️</span>
-          <div class="stat-info">
-            <div class="stat-value">{{ dive.gewicht_kg }} kg</div>
-            <div class="stat-label">Gewicht</div>
-          </div>
+        <div class="dive-notes" *ngIf="dive.bemerkungen" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic;">
+          📝 {{ dive.bemerkungen }}
         </div>
       </div>
 
-      <div class="dive-meta" *ngIf="dive.sicht || dive.stroemung || dive.unterschrift_partner">
-        <span class="stat-pill" *ngIf="dive.sicht">
-          👁️ Sicht: {{ dive.sicht }}
-        </span>
-        <span class="stat-pill" *ngIf="dive.stroemung">
-          🌊 Strömung: {{ dive.stroemung }}
-        </span>
-        <span class="stat-pill" *ngIf="dive.unterschrift_partner">
-          🤝 {{ dive.unterschrift_partner }}
-        </span>
+      <!-- Right: Delete Button -->
+      <div class="dive-row-right" style="padding-left: 1rem; flex-shrink: 0;">
+        <button type="button" class="btn btn-outline btn-sm" (click)="deleteDive($event, dive.id, dive.tauchgang_nr)" title="Tauchgang löschen" style="border-color: rgba(239, 68, 68, 0.3); color: var(--danger-light); padding: 0.4rem;">
+          🗑️
+        </button>
       </div>
 
-      <div class="dive-stamps" *ngIf="dive.stempel && dive.stempel.length > 0">
-        <span class="badge" *ngFor="let stamp of dive.stempel">🏅 {{ stamp }}</span>
-      </div>
-    </div>
+    </a>
   </div>
 </div>

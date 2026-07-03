@@ -155,8 +155,8 @@ async function insertDive(dive) {
   const query = `
     INSERT INTO dives (
       tauchgang_nr, ort, datum, sicht, gewicht_kg, dauer_min,
-      tiefe_m, temperatur_c, stroemung, unterschrift_partner, stempel
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      tiefe_m, temperatur_c, stroemung, unterschrift_partner, stempel, bemerkungen
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const result = await db.run(query, [
@@ -170,7 +170,8 @@ async function insertDive(dive) {
     dive.temperatur_c !== undefined ? dive.temperatur_c : null,
     dive.stroemung !== undefined ? dive.stroemung : null,
     dive.unterschrift_partner !== undefined ? dive.unterschrift_partner : null,
-    stempelValue
+    stempelValue,
+    dive.bemerkungen !== undefined ? dive.bemerkungen : null
   ]);
 
   return await getDiveById(result.lastID);
@@ -219,11 +220,114 @@ async function getAllDives() {
   });
 }
 
+/**
+ * Update an existing dive record by ID.
+ * @param {number} id - The dive ID to update.
+ * @param {object} dive - The updated dive fields.
+ * @returns {Promise<object|null>} The updated dive record, or null if not found.
+ */
+async function updateDive(id, dive) {
+  if (!db) {
+    throw new Error('Database not initialized. Call initDb() first.');
+  }
+
+  let stempelValue = null;
+  if (dive.stempel !== undefined && dive.stempel !== null) {
+    if (Array.isArray(dive.stempel)) {
+      stempelValue = JSON.stringify(dive.stempel);
+    } else if (typeof dive.stempel === 'string') {
+      try {
+        const parsed = JSON.parse(dive.stempel);
+        if (!Array.isArray(parsed)) throw new Error('stempel must be a JSON array');
+        stempelValue = JSON.stringify(parsed);
+      } catch (e) {
+        throw new Error('stempel must be a valid JSON array string: ' + e.message);
+      }
+    }
+  }
+
+  const result = await db.run(`
+    UPDATE dives SET
+      tauchgang_nr = ?, ort = ?, datum = ?, sicht = ?,
+      gewicht_kg = ?, dauer_min = ?, tiefe_m = ?, temperatur_c = ?,
+      stroemung = ?, unterschrift_partner = ?, stempel = ?, bemerkungen = ?
+    WHERE id = ?`,
+    [
+      dive.tauchgang_nr !== undefined ? dive.tauchgang_nr : null,
+      dive.ort !== undefined ? dive.ort : null,
+      dive.datum !== undefined ? dive.datum : null,
+      dive.sicht !== undefined ? dive.sicht : null,
+      dive.gewicht_kg !== undefined ? dive.gewicht_kg : null,
+      dive.dauer_min !== undefined ? dive.dauer_min : null,
+      dive.tiefe_m !== undefined ? dive.tiefe_m : null,
+      dive.temperatur_c !== undefined ? dive.temperatur_c : null,
+      dive.stroemung !== undefined ? dive.stroemung : null,
+      dive.unterschrift_partner !== undefined ? dive.unterschrift_partner : null,
+      stempelValue,
+      dive.bemerkungen !== undefined ? dive.bemerkungen : null,
+      id
+    ]
+  );
+
+  if (result.changes === 0) return null;
+  return await getDiveById(id);
+}
+
+/**
+ * Check if a dive with the same tauchgang_nr OR (same ort + datum) already exists.
+ * Used to filter out already-digitized entries when processing a photo.
+ *
+ * @param {object} dive - The candidate dive object with at least { ort, datum, tauchgang_nr }.
+ * @returns {Promise<object|undefined>} The existing record, or undefined if no duplicate found.
+ */
+async function findExistingDive(dive) {
+  if (!db) {
+    throw new Error('Database not initialized. Call initDb() first.');
+  }
+
+  // Match by dive number if present (most reliable)
+  if (dive.tauchgang_nr !== null && dive.tauchgang_nr !== undefined) {
+    const byNr = await db.get(
+      'SELECT id FROM dives WHERE tauchgang_nr = ?',
+      [dive.tauchgang_nr]
+    );
+    if (byNr) return byNr;
+  }
+
+  // Fallback: match by location + date
+  if (dive.ort && dive.datum) {
+    const byOrtDatum = await db.get(
+      'SELECT id FROM dives WHERE ort = ? AND datum = ?',
+      [String(dive.ort).trim(), String(dive.datum).trim()]
+    );
+    if (byOrtDatum) return byOrtDatum;
+  }
+
+  return undefined;
+}
+
+/**
+ * Delete a dive record by ID.
+ * @param {number} id - The dive ID to delete.
+ * @returns {Promise<boolean>} True if deleted, false if not found.
+ */
+async function deleteDive(id) {
+  if (!db) {
+    throw new Error('Database not initialized. Call initDb() first.');
+  }
+
+  const result = await db.run('DELETE FROM dives WHERE id = ?', [id]);
+  return result.changes > 0;
+}
+
 module.exports = {
   initDb,
   closeDb,
   getDb,
   insertDive,
   getDiveById,
-  getAllDives
+  getAllDives,
+  findExistingDive,
+  updateDive,
+  deleteDive
 };

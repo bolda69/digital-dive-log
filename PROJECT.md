@@ -76,8 +76,8 @@ digital-dive-log/
 | 3 | Backend API Endpoints | Implementation of REST APIs for CRUD operations on dives | M2 | DONE (Conv: 0b267b6c-71cb-413c-8c1d-8f92342579c6, Output: backend/src/routes.js) |
 | 4 | AI Gemini Integration | Image upload, Gemini API integration, JSON extraction validation | M3 | DONE (Conv: 0b267b6c-71cb-413c-8c1d-8f92342579c6, Output: backend/src/gemini.js) |
 | 5 | Frontend Core & Services | Angular project structure, routing, HTTP dive service integration | None | DONE (Conv: a11adf0b-33fd-4b61-9c37-c4734d76c132, Output: frontend/src/app/services/dive.service.ts) |
-| 6 | Frontend View Components | Implementation of Upload, Verification, and List views | M5, M4 | PLANNED |
-| 7 | Full-Stack Integration & QA | Verification against E2E test suite and adversarial coverage hardening | M1, M6 | PLANNED |
+| 6 | Frontend View Components | Implementation of Upload, Verification, and List views | M5, M4 | DONE (Conv: d1ef3f84-4113-4802-95a4-31386e015a5b, Output: frontend/src/app/components/) |
+| 7 | Full-Stack Integration & QA | Verification against E2E test suite and adversarial coverage hardening | M1, M6 | DONE (Conv: d1ef3f84-4113-4802-95a4-31386e015a5b, 38/38 E2E tests passed) |
 
 ## Interface Contracts
 

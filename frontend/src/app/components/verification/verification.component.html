@@ -1,162 +1,209 @@
 <div class="page-container">
-  <div class="page-header">
-    <h2>✅ Daten überprüfen</h2>
-    <p>Überprüfe und korrigiere die von der KI erkannten Informationen vor dem Speichern</p>
+
+  <!-- Loading (edit mode) -->
+  <div class="loading-state" *ngIf="loadingEdit">
+    <div class="spinner"></div>
+    <span>Tauchgang wird geladen...</span>
   </div>
 
-  <div class="glass-card">
-    <form [formGroup]="diveForm" (ngSubmit)="onSubmit()" class="verification-form">
+  <ng-container *ngIf="!loadingEdit">
+  <div class="page-header">
+    <div class="header-top">
+      <h2>{{ editMode ? '✏️ Tauchgang bearbeiten' : '🔍 Daten prüfen & bestätigen' }}</h2>
+      <!-- Progress pill (only for new dive queue) -->
+      <div class="progress-pill" *ngIf="!editMode && totalDives > 1">
+        <span class="progress-label">Tauchgang {{ currentIndex + 1 }} von {{ totalDives }}</span>
+      </div>
+    </div>
+    <p *ngIf="!editMode">Die KI hat folgende Daten ausgelesen. Bitte prüfen und bei Bedarf korrigieren.</p>
+    <p *ngIf="editMode">Felder anpassen und speichern.</p>
 
+    <!-- Progress bar (only for new dive queue) -->
+    <div class="progress-bar-wrap" *ngIf="!editMode && totalDives > 1">
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" [style.width.%]="progressPercent"></div>
+      </div>
+      <div class="progress-steps">
+        <div class="progress-step"
+             *ngFor="let d of drafts; let i = index"
+             [class.done]="i < currentIndex"
+             [class.active]="i === currentIndex">
+          {{ i + 1 }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dive number badge -->
+  <div class="dive-badge" *ngIf="form">
+    <span class="badge-icon">🤿</span>
+    <span *ngIf="form.get('tauchgang_nr')?.value">
+      Tauchgang <strong>#{{ form.get('tauchgang_nr')?.value }}</strong>
+    </span>
+    <span *ngIf="!form.get('tauchgang_nr')?.value">Unbekannte Nr.</span>
+    <span class="badge-sep">·</span>
+    <span>{{ form.get('ort')?.value || '–' }}</span>
+    <span class="badge-sep">·</span>
+    <span>{{ form.get('datum')?.value || '–' }}</span>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" *ngIf="form" novalidate>
+
+    <!-- Row 1: Allgemeine Angaben -->
+    <div class="glass-card form-section">
+      <h3 class="section-title">📋 Allgemeine Angaben</h3>
       <div class="form-grid">
 
-        <!-- Dive Number -->
         <div class="form-group">
           <label for="tauchgang_nr">Tauchgang Nr.</label>
-          <input type="number" id="tauchgang_nr" formControlName="tauchgang_nr"
-                 placeholder="z.B. 527" class="form-control">
-          <div class="error-msg" *ngIf="diveForm.get('tauchgang_nr')?.touched && diveForm.get('tauchgang_nr')?.invalid">
-            <span *ngIf="diveForm.get('tauchgang_nr')?.errors?.['min']">Muss 0 oder größer sein.</span>
-            <span *ngIf="diveForm.get('tauchgang_nr')?.errors?.['max']">Wert ist unrealistisch groß.</span>
-            <span *ngIf="diveForm.get('tauchgang_nr')?.errors?.['pattern']">Muss eine ganze Zahl sein.</span>
-          </div>
+          <input id="tauchgang_nr" type="number" class="form-control"
+                 formControlName="tauchgang_nr" placeholder="z. B. 527" min="1" />
         </div>
 
-        <!-- Date -->
+        <div class="form-group required">
+          <label for="ort">Tauchort</label>
+          <input id="ort" type="text" class="form-control"
+                 formControlName="ort" placeholder="z. B. Dahab Blue Hole"
+                 [class.form-control-error]="isInvalid('ort')" />
+          <div class="error-msg" *ngIf="isInvalid('ort')">Ort ist erforderlich.</div>
+        </div>
+
         <div class="form-group required">
           <label for="datum">Datum</label>
-          <input type="date" id="datum" formControlName="datum" class="form-control">
-          <div class="error-msg" *ngIf="diveForm.get('datum')?.touched && diveForm.get('datum')?.invalid">
-            <span *ngIf="diveForm.get('datum')?.errors?.['required']">Datum ist erforderlich.</span>
-            <span *ngIf="diveForm.get('datum')?.errors?.['invalidDate']">Bitte ein gültiges Datum eingeben.</span>
-          </div>
+          <input id="datum" type="date" class="form-control"
+                 formControlName="datum"
+                 [class.form-control-error]="isInvalid('datum')" />
+          <div class="error-msg" *ngIf="isInvalid('datum')">Datum ist erforderlich.</div>
         </div>
 
-        <!-- Location -->
-        <div class="form-group required span-2">
-          <label for="ort">Tauchort (Ort)</label>
-          <input type="text" id="ort" formControlName="ort"
-                 placeholder="z.B. Rotes Meer, Dahab Blue Hole" class="form-control">
-          <div class="error-msg" *ngIf="diveForm.get('ort')?.touched && diveForm.get('ort')?.invalid">
-            <span *ngIf="diveForm.get('ort')?.errors?.['required']">Ort ist erforderlich.</span>
-            <span *ngIf="diveForm.get('ort')?.errors?.['maxlength']">Maximal 1000 Zeichen.</span>
-          </div>
-        </div>
+      </div>
+    </div>
 
-        <!-- Depth -->
+    <!-- Row 2: Tauchparameter -->
+    <div class="glass-card form-section">
+      <h3 class="section-title">📊 Tauchparameter</h3>
+      <div class="form-grid form-grid-4">
+
         <div class="form-group">
           <label for="tiefe_m">Tiefe (m)</label>
-          <input type="number" step="0.1" id="tiefe_m" formControlName="tiefe_m"
-                 placeholder="z.B. 22.5" class="form-control">
-          <div class="error-msg" *ngIf="diveForm.get('tiefe_m')?.touched && diveForm.get('tiefe_m')?.invalid">
-            <span *ngIf="diveForm.get('tiefe_m')?.errors?.['min']">Muss 0 oder größer sein.</span>
-            <span *ngIf="diveForm.get('tiefe_m')?.errors?.['max']">Darf 11.000 m nicht überschreiten.</span>
-          </div>
+          <input id="tiefe_m" type="number" class="form-control"
+                 formControlName="tiefe_m" placeholder="z. B. 28.5" step="0.1" min="0" />
         </div>
 
-        <!-- Duration -->
         <div class="form-group">
           <label for="dauer_min">Dauer (min)</label>
-          <input type="number" id="dauer_min" formControlName="dauer_min"
-                 placeholder="z.B. 45" class="form-control">
-          <div class="error-msg" *ngIf="diveForm.get('dauer_min')?.touched && diveForm.get('dauer_min')?.invalid">
-            <span *ngIf="diveForm.get('dauer_min')?.errors?.['min']">Muss 0 oder größer sein.</span>
-            <span *ngIf="diveForm.get('dauer_min')?.errors?.['pattern']">Muss eine ganze Zahl sein.</span>
-          </div>
+          <input id="dauer_min" type="number" class="form-control"
+                 formControlName="dauer_min" placeholder="z. B. 45" min="0" />
         </div>
 
-        <!-- Temperature -->
         <div class="form-group">
-          <label for="temperatur_c">Wassertemperatur (°C)</label>
-          <input type="number" id="temperatur_c" formControlName="temperatur_c"
-                 placeholder="z.B. 26" class="form-control">
-          <div class="error-msg" *ngIf="diveForm.get('temperatur_c')?.touched && diveForm.get('temperatur_c')?.invalid">
-            <span *ngIf="diveForm.get('temperatur_c')?.errors?.['min']">Muss 0 oder größer sein.</span>
-            <span *ngIf="diveForm.get('temperatur_c')?.errors?.['pattern']">Muss eine ganze Zahl sein.</span>
-          </div>
+          <label for="temperatur_c">Temperatur (°C)</label>
+          <input id="temperatur_c" type="number" class="form-control"
+                 formControlName="temperatur_c" placeholder="z. B. 24" min="-5" max="50" />
         </div>
 
-        <!-- Weight -->
         <div class="form-group">
           <label for="gewicht_kg">Gewicht (kg)</label>
-          <input type="number" step="0.1" id="gewicht_kg" formControlName="gewicht_kg"
-                 placeholder="z.B. 8.0" class="form-control">
-          <div class="error-msg" *ngIf="diveForm.get('gewicht_kg')?.touched && diveForm.get('gewicht_kg')?.invalid">
-            <span *ngIf="diveForm.get('gewicht_kg')?.errors?.['min']">Muss 0 oder größer sein.</span>
-          </div>
+          <input id="gewicht_kg" type="number" class="form-control"
+                 formControlName="gewicht_kg" placeholder="z. B. 8.0" step="0.5" min="0" />
         </div>
 
-        <!-- Visibility -->
+      </div>
+    </div>
+
+    <!-- Row 3: Bedingungen -->
+    <div class="glass-card form-section">
+      <h3 class="section-title">🌊 Bedingungen & Buddy</h3>
+      <div class="form-grid">
+
         <div class="form-group">
           <label for="sicht">Sicht</label>
-          <input type="text" id="sicht" formControlName="sicht"
-                 placeholder="z.B. gut, 15m" class="form-control">
-          <div class="error-msg" *ngIf="diveForm.get('sicht')?.touched && diveForm.get('sicht')?.invalid">
-            <span *ngIf="diveForm.get('sicht')?.errors?.['maxlength']">Maximal 1000 Zeichen.</span>
-          </div>
+          <select id="sicht" class="form-control" formControlName="sicht">
+            <option [ngValue]="null">-- Keine Angabe --</option>
+            <option value="gut">gut (😊)</option>
+            <option value="mässig">mässig (😐)</option>
+            <option value="schlecht">schlecht (😞)</option>
+          </select>
         </div>
 
-        <!-- Current -->
         <div class="form-group">
           <label for="stroemung">Strömung</label>
-          <input type="text" id="stroemung" formControlName="stroemung"
-                 placeholder="z.B. keine, leicht, stark" class="form-control">
-          <div class="error-msg" *ngIf="diveForm.get('stroemung')?.touched && diveForm.get('stroemung')?.invalid">
-            <span *ngIf="diveForm.get('stroemung')?.errors?.['maxlength']">Maximal 1000 Zeichen.</span>
-          </div>
+          <select id="stroemung" class="form-control" formControlName="stroemung">
+            <option value="">-- Keine Angabe --</option>
+            <option value="keine">keine</option>
+            <option value="mild">mild</option>
+            <option value="stark">stark</option>
+          </select>
         </div>
 
-        <!-- Buddy -->
         <div class="form-group">
-          <label for="unterschrift_partner">Tauchpartner</label>
-          <input type="text" id="unterschrift_partner" formControlName="unterschrift_partner"
-                 placeholder="z.B. Meli, Selina" class="form-control">
-          <div class="error-msg" *ngIf="diveForm.get('unterschrift_partner')?.touched && diveForm.get('unterschrift_partner')?.invalid">
-            <span *ngIf="diveForm.get('unterschrift_partner')?.errors?.['maxlength']">Maximal 1000 Zeichen.</span>
-          </div>
+          <label for="unterschrift_partner">Buddy / Partner</label>
+          <input id="unterschrift_partner" type="text" class="form-control"
+                 formControlName="unterschrift_partner" placeholder="z. B. Salina" />
+        </div>
+
+      </div>
+      
+      <div class="form-grid mt-2">
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label for="bemerkungen">Bemerkungen / Sichtungen</label>
+          <textarea id="bemerkungen" class="form-control" formControlName="bemerkungen" rows="3" placeholder="z. B. Grosse Eglis + Hecht"></textarea>
         </div>
       </div>
+    </div>
 
-      <!-- Stamps Section -->
-      <div class="stamps-section">
-        <div class="stamps-header">
-          <label>🏅 Stempel</label>
-          <span class="badge" *ngIf="stamps.length > 0">{{ stamps.length }}</span>
-        </div>
-
-        <div class="stamps-list" *ngIf="stamps.length > 0">
-          <span class="stamp-badge" *ngFor="let stamp of stamps; let i = index">
-            {{ stamp }}
-            <button type="button" class="btn-remove-stamp" (click)="removeStamp(i)" title="Entfernen">✕</button>
-          </span>
-        </div>
-
-        <p class="no-stamps-msg text-muted" *ngIf="stamps.length === 0" style="font-size: 0.85rem;">
-          Keine Stempel erkannt. Füge manuell hinzu.
-        </p>
-
-        <div class="add-stamp-input">
-          <input type="text" [(ngModel)]="newStamp" [ngModelOptions]="{standalone: true}"
-                 placeholder="Stempel hinzufügen..." class="form-control"
-                 (keydown.enter)="addStamp($event)">
-          <button type="button" class="btn btn-secondary" (click)="addStamp()">+ Hinzufügen</button>
-        </div>
-      </div>
-
-      <!-- Actions -->
-      <div class="form-actions">
-        <button type="button" class="btn btn-outline" routerLink="/upload" [disabled]="loading">
-          ← Zurück
-        </button>
-        <button type="submit" class="btn btn-success btn-lg" [disabled]="diveForm.invalid || loading">
-          <span class="spinner spinner-sm" *ngIf="loading"></span>
-          <span *ngIf="!loading">💾 Tauchgang speichern</span>
-          <span *ngIf="loading">Speichern...</span>
+    <!-- Row 4: Stempel -->
+    <div class="glass-card form-section">
+      <div class="section-header">
+        <h3 class="section-title" style="margin-bottom: 0;">🏅 Stempel</h3>
+        <button type="button" class="btn btn-outline btn-sm" (click)="addStempel()">
+          + Stempel hinzufügen
         </button>
       </div>
 
-      <div class="alert alert-danger mt-2" *ngIf="errorMessage">
-        ⚠️ {{ errorMessage }}
+      <div class="stempel-list" formArrayName="stempel">
+        <div class="stempel-empty" *ngIf="stempel.length === 0">
+          <span>Keine Stempel erkannt</span>
+        </div>
+        <div class="stempel-item" *ngFor="let ctrl of stempel.controls; let i = index; trackBy: trackByIndex">
+          <input type="text" class="form-control"
+                 [formControlName]="i"
+                 placeholder="z. B. Scuba Club Dahab" />
+          <button type="button" class="btn btn-danger btn-sm stempel-remove" (click)="removeStempel(i)" title="Entfernen">
+            ✕
+          </button>
+        </div>
       </div>
-    </form>
-  </div>
+    </div>
+
+    <!-- Error -->
+    <div class="alert alert-danger" *ngIf="errorMessage">
+      ⚠️ {{ errorMessage }}
+    </div>
+
+    <!-- Actions -->
+    <div class="form-actions">
+      <button type="button" class="btn btn-outline" (click)="goBack()" [disabled]="saving">
+        {{ editMode ? '← Zurück zum Logbuch' : '← Zurück zum Upload' }}
+      </button>
+
+      <div class="form-actions-right">
+        <!-- Skip button (only when multiple new dives) -->
+        <button type="button" class="btn btn-secondary" (click)="skipCurrent()" [disabled]="saving" *ngIf="!editMode && totalDives > 1">
+          Überspringen →
+        </button>
+
+        <button type="submit" class="btn btn-success btn-lg" [disabled]="saving">
+          <div class="spinner spinner-sm" *ngIf="saving"></div>
+          <ng-container *ngIf="!saving">
+            <ng-container *ngIf="editMode">💾 Änderungen speichern</ng-container>
+            <ng-container *ngIf="!editMode">{{ isLast ? '💾 Speichern & Fertig' : '💾 Speichern & Weiter →' }}</ng-container>
+          </ng-container>
+          <ng-container *ngIf="saving">Speichern...</ng-container>
+        </button>
+      </div>
+    </div>
+
+  </form>
+  </ng-container>
 </div>

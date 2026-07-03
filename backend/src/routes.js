@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { insertDive, getAllDives, getDb, initDb } = require('./db');
+const { insertDive, getAllDives, getDiveById, getDb, initDb, findExistingDive, updateDive, deleteDive } = require('./db');
 const multer = require('multer');
 const { extractDiveLog } = require('./gemini');
 
@@ -34,6 +34,25 @@ router.get('/dives', async (req, res) => {
 });
 
 /**
+ * GET /dives/:id
+ * Returns a single dive by ID.
+ */
+router.get('/dives/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id) || id < 1) {
+    return res.status(400).json({ error: 'Invalid dive id' });
+  }
+  try {
+    const dive = await getDiveById(id);
+    if (!dive) return res.status(404).json({ error: 'Dive not found' });
+    return res.status(200).json(dive);
+  } catch (error) {
+    console.error('Error fetching dive:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+/**
  * POST /dives
  * Validates body inputs, delegates to insertDive(), and returns 210 with created record.
  */
@@ -53,7 +72,8 @@ router.post('/dives', async (req, res) => {
     temperatur_c,
     stroemung,
     unterschrift_partner,
-    stempel
+    stempel,
+    bemerkungen
   } = req.body;
 
   // 1. Required Fields Validation (ort and datum are required, non-empty strings)
@@ -95,7 +115,7 @@ router.post('/dives', async (req, res) => {
   }
 
   // 2.5. Optional Text Fields Validation
-  const optionalTextFields = ['sicht', 'stroemung', 'unterschrift_partner'];
+  const optionalTextFields = ['sicht', 'stroemung', 'unterschrift_partner', 'bemerkungen'];
   for (const field of optionalTextFields) {
     const val = req.body[field];
     if (val !== undefined && val !== null) {
@@ -156,7 +176,8 @@ router.post('/dives', async (req, res) => {
       temperatur_c: temperatur_c !== undefined ? temperatur_c : null,
       stroemung: stroemung !== undefined ? stroemung : null,
       unterschrift_partner: unterschrift_partner !== undefined ? unterschrift_partner : null,
-      stempel: stempel !== undefined ? stempel : null
+      stempel: stempel !== undefined ? stempel : null,
+      bemerkungen: bemerkungen !== undefined ? bemerkungen : null
     });
 
     return res.status(201).json(record);
@@ -167,8 +188,92 @@ router.post('/dives', async (req, res) => {
 });
 
 /**
+ * PUT /dives/:id
+ * Update an existing dive record.
+ */
+router.put('/dives/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id) || id < 1) {
+    return res.status(400).json({ error: 'Invalid dive id' });
+  }
+
+  if (!req.body || typeof req.body !== 'object') {
+    return res.status(400).json({ error: 'Request body is required' });
+  }
+
+  const { ort, datum, tauchgang_nr, sicht, gewicht_kg, dauer_min,
+          tiefe_m, temperatur_c, stroemung, unterschrift_partner, stempel, bemerkungen } = req.body;
+
+  // Required fields
+  if (!ort || typeof ort !== 'string' || ort.trim() === '') {
+    return res.status(400).json({ error: 'ort is required' });
+  }
+  if (!datum || typeof datum !== 'string') {
+    return res.status(400).json({ error: 'datum is required' });
+  }
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(datum)) {
+    return res.status(400).json({ error: 'datum must match YYYY-MM-DD format' });
+  }
+
+  // Stempel
+  if (stempel !== undefined && stempel !== null && !Array.isArray(stempel)) {
+    return res.status(400).json({ error: 'stempel must be an array' });
+  }
+
+  try {
+    const record = await updateDive(id, {
+      tauchgang_nr: tauchgang_nr !== undefined ? tauchgang_nr : null,
+      ort: ort.trim(),
+      datum,
+      sicht: sicht !== undefined ? sicht : null,
+      gewicht_kg: gewicht_kg !== undefined ? gewicht_kg : null,
+      dauer_min: dauer_min !== undefined ? dauer_min : null,
+      tiefe_m: tiefe_m !== undefined ? tiefe_m : null,
+      temperatur_c: temperatur_c !== undefined ? temperatur_c : null,
+      stroemung: stroemung !== undefined ? stroemung : null,
+      unterschrift_partner: unterschrift_partner !== undefined ? unterschrift_partner : null,
+      stempel: stempel !== undefined ? stempel : null,
+      bemerkungen: bemerkungen !== undefined ? bemerkungen : null
+    });
+
+    if (!record) {
+      return res.status(404).json({ error: 'Dive not found' });
+    }
+    return res.status(200).json(record);
+  } catch (error) {
+    console.error('Error updating dive:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+/**
+ * DELETE /dives/:id
+ * Delete an existing dive record.
+ */
+router.delete('/dives/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id) || id < 1) {
+    return res.status(400).json({ error: 'Invalid dive id' });
+  }
+
+  try {
+    const success = await deleteDive(id);
+    if (!success) {
+      return res.status(404).json({ error: 'Dive not found' });
+    }
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting dive:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+/**
  * POST /upload
- * Image upload & AI extraction
+ * Image upload & AI extraction.
+ * Returns an array of new dive drafts (already-digitized entries are filtered out).
+ * Response shape: { dives: DiveDraft[], skipped: number }
  */
 router.post('/upload', (req, res) => {
   uploadSingle(req, res, async (err) => {
@@ -219,10 +324,11 @@ router.post('/upload', (req, res) => {
           unterschrift_partner: null,
           stempel: []
         };
+        // Legacy: tests expect a single object – wrap for backward compat
         return res.status(200).json(mockNulls);
       }
 
-      // Default simulated successful response
+      // Default simulated successful response (single object for E2E test compat)
       const standardPayload = {
         tauchgang_nr: 527,
         ort: "Dahab Blue Hole",
@@ -239,69 +345,92 @@ router.post('/upload', (req, res) => {
       return res.status(200).json(standardPayload);
     }
 
-    // Real Gemini execution
+    // ---- Real Gemini execution ----
     try {
-      const extracted = await extractDiveLog(req.file.buffer, req.file.mimetype);
+      const rawDives = await extractDiveLog(req.file.buffer, req.file.mimetype);
 
-      // Validate required fields
-      if (!extracted || typeof extracted !== 'object') {
-        return res.status(400).json({ error: 'AI extraction returned an invalid result' });
+      if (!Array.isArray(rawDives) || rawDives.length === 0) {
+        return res.status(400).json({ error: 'AI extraction returned no dive entries' });
       }
 
-      // Check required fields: ort and datum
-      if (extracted.ort === undefined || extracted.ort === null || String(extracted.ort).trim() === '') {
-        return res.status(400).json({ error: 'AI extraction failed: missing required field ort' });
-      }
-      if (extracted.datum === undefined || extracted.datum === null || String(extracted.datum).trim() === '') {
-        return res.status(400).json({ error: 'AI extraction failed: missing required field datum' });
-      }
+      // Helper to sanitize a single raw dive entry from Gemini
+      function sanitizeEntry(extracted) {
+        if (!extracted || typeof extracted !== 'object') return null;
 
-      // Sanitize/coerce required fields
-      const ort = String(extracted.ort).trim();
-      const datum = String(extracted.datum).trim();
+        const ort = extracted.ort ? String(extracted.ort).trim() : null;
+        const datum = extracted.datum ? String(extracted.datum).trim() : null;
 
-      // Sanitize optional numeric fields
-      const numericFields = ['tauchgang_nr', 'dauer_min', 'tiefe_m', 'gewicht_kg', 'temperatur_c'];
-      const integerFields = ['tauchgang_nr', 'dauer_min', 'temperatur_c'];
-      const sanitized = { ort, datum };
+        if (!ort || !datum) return null; // skip entries missing required fields
 
-      for (const field of numericFields) {
-        const val = extracted[field];
-        if (val !== undefined && val !== null && val !== '') {
-          const num = Number(val);
-          if (Number.isFinite(num)) {
-            sanitized[field] = integerFields.includes(field) ? Math.round(num) : num;
+        const numericFields = ['tauchgang_nr', 'dauer_min', 'tiefe_m', 'gewicht_kg', 'temperatur_c'];
+        const integerFields = ['tauchgang_nr', 'dauer_min', 'temperatur_c'];
+        const sanitized = { ort, datum };
+
+        for (const field of numericFields) {
+          const val = extracted[field];
+          if (val !== undefined && val !== null && val !== '') {
+            const num = Number(val);
+            sanitized[field] = Number.isFinite(num)
+              ? (integerFields.includes(field) ? Math.round(num) : num)
+              : null;
           } else {
             sanitized[field] = null;
           }
+        }
+
+        const textFields = ['sicht', 'stroemung', 'unterschrift_partner'];
+        for (const field of textFields) {
+          const val = extracted[field];
+          if (field === 'stroemung') {
+            // Preserve empty string for stroemung (means "no current" rather than unknown)
+            sanitized[field] = (val === null || val === undefined) ? null : String(val).trim();
+          } else {
+            sanitized[field] = (val !== undefined && val !== null && String(val).trim() !== '')
+              ? String(val).trim()
+              : null;
+          }
+        }
+
+        if (Array.isArray(extracted.stempel)) {
+          sanitized.stempel = extracted.stempel
+            .filter(item => item !== undefined && item !== null)
+            .map(item => String(item));
+        } else if (typeof extracted.stempel === 'string' && extracted.stempel.trim() !== '') {
+          sanitized.stempel = [extracted.stempel];
         } else {
-          sanitized[field] = null;
+          sanitized.stempel = [];
+        }
+
+        return sanitized;
+      }
+
+      // Sanitize all entries
+      const sanitizedDives = rawDives.map(sanitizeEntry).filter(Boolean);
+
+      if (sanitizedDives.length === 0) {
+        return res.status(400).json({ error: 'AI extraction failed: no valid dive entries found in image' });
+      }
+
+      // Filter out already-digitized dives
+      const newDives = [];
+      let skipped = 0;
+      for (const dive of sanitizedDives) {
+        const existing = await findExistingDive(dive);
+        if (existing) {
+          skipped++;
+          console.log(`Skipping duplicate dive: tauchgang_nr=${dive.tauchgang_nr}, ort=${dive.ort}, datum=${dive.datum} (matches DB id=${existing.id})`);
+        } else {
+          newDives.push(dive);
         }
       }
 
-      // Sanitize optional text fields
-      const textFields = ['sicht', 'stroemung', 'unterschrift_partner'];
-      for (const field of textFields) {
-        const val = extracted[field];
-        if (val !== undefined && val !== null && val !== '') {
-          sanitized[field] = String(val);
-        } else {
-          sanitized[field] = null;
-        }
+      // If only 1 new dive found: return single object (backward compatible with old frontend)
+      // If multiple: return { dives: [...], skipped: N }
+      if (newDives.length === 1 && skipped === 0) {
+        return res.status(200).json(newDives[0]);
       }
 
-      // Sanitize stempel array
-      if (Array.isArray(extracted.stempel)) {
-        sanitized.stempel = extracted.stempel
-          .filter(item => item !== undefined && item !== null)
-          .map(item => String(item));
-      } else if (typeof extracted.stempel === 'string' && extracted.stempel.trim() !== '') {
-        sanitized.stempel = [extracted.stempel];
-      } else {
-        sanitized.stempel = [];
-      }
-
-      return res.status(200).json(sanitized);
+      return res.status(200).json({ dives: newDives, skipped });
 
     } catch (apiError) {
       console.error('Gemini extraction failed:', apiError);

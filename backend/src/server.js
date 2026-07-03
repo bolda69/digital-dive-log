@@ -1,11 +1,14 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
 require('dotenv').config(); // fallback to backend/ .env if exists
 const path = require('path');
+const fs = require('fs');
 const app = require('./app');
 const { initDb } = require('./db');
 
 const PORT = process.env.PORT || 3000;
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../dives.db');
+
+// Ensure uploads directory exists
 
 async function startServer() {
   try {

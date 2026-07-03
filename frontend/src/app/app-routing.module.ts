@@ -8,6 +8,7 @@ export const routes: Routes = [
   { path: '', redirectTo: '/list', pathMatch: 'full' },
   { path: 'upload', component: UploadComponent },
   { path: 'verify', component: VerificationComponent },
+  { path: 'edit/:id', component: VerificationComponent },
   { path: 'list', component: ListComponent },
   { path: '**', redirectTo: '/list' }
 ];
